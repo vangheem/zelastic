@@ -147,12 +147,7 @@ class Storage(object):
 
 
 class ResultWrapper(object):
-    """
-    To cache a group of results that rolls.
-    optimized for sequentially access
-    """
-
-    def __init__(self, container, rl, count=None, cache_size=1000, bulk_size=400):
+    def __init__(self, container, rl):
         self.container = container
         self.rl = rl
 
@@ -224,7 +219,7 @@ class Container(object):
         index[index_name] = _type
         self.es.update_mapping(self.name)
 
-    def search(self, dquery, page=None, page_size=None):
+    def search(self, dquery):
         filters = []
         query = MatchAllQuery()
         for key, value in dquery.items():
@@ -235,4 +230,4 @@ class Container(object):
             self,
             self.es.conn.search(query=query, fields="zelastic_doc_key"),
             bulk_size=self.es.bulk_size)
-        
+
