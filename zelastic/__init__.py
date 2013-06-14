@@ -219,7 +219,7 @@ class Container(object):
         index[index_name] = _type
         self.es.update_mapping(self.name)
 
-    def search(self, dquery):
+    def search(self, dquery={}, sort='zelastic_doc_key'):
         filters = []
         query = MatchAllQuery()
         for key, value in dquery.items():
@@ -228,6 +228,6 @@ class Container(object):
         query = FilteredQuery(query, ANDFilter(filters))
         return ResultWrapper(
             self,
-            self.es.conn.search(query=query, fields="zelastic_doc_key"),
-            bulk_size=self.es.bulk_size)
+            self.es.conn.search(query=query, fields="zelastic_doc_key",
+                sort=sort))
 
