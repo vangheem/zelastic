@@ -17,17 +17,10 @@ class InvalidIndexException(BaseZelasticException):
 
 
 class ElasticCatalog(object):
-    doc_type = 'zelastic'
     default_indexes = {
-        'zelastic_container_name' : {
-            'type': 'string',
-            'index': 'not_analyzed',
-            'store': False
-        },
         'zelastic_doc_key': {
             'type': 'string',
-            'index': 'not_analyzed',
-            'store': False
+            'index': 'not_analyzed'
         }
     }
 
@@ -53,13 +46,11 @@ class ElasticCatalog(object):
                 index = {
                     'type': 'string',
                     'index': 'not_analyzed',
-                    'store': False
                 }
             elif _type == 'full':
                 index = {
                     'type': 'string',
                     'index': 'analyzed',
-                    'store': False
                 }
             elif _type == 'bool':
                 index = {
@@ -68,22 +59,19 @@ class ElasticCatalog(object):
             elif _type == 'int':
                 index = {
                     'type': 'integer',
-                    'store': False
                 }
             elif _type == 'datetime':
                 index = {
                     'type': 'date',
-                    'store': False
                 }
             elif _type == 'float':
                 index = {
                     'type': 'float',
-                    'store': False
                 }
             if index is not None:
                 properties[index_name] = index
         self.conn.indices.put_mapping(
-            doc_type=self.doc_type,
+            doc_type=name,
             mapping={
                 'properties': properties
             },
@@ -95,20 +83,26 @@ class ElasticCatalog(object):
     def index(self, container_name, doc, key):
         # need to add data to the index that isn't actually persisted
         data = {
-            'zelastic_doc_key': key,
-            'zelastic_container_name': container_name
+            'zelastic_doc_key': key
         }
         meta = self.storage.meta(container_name)
         indexes = meta['indexes']
         for index in indexes.keys():
             if index in doc:
                 data[index] = doc[index]
-        self.conn.index(data, self.name, self.doc_type,
+        self.conn.index(data, self.name, container_name,
             self.id(container_name, key), bulk=self.bulk)
 
     def delete(self, container_name, key):
-        self.conn.delete(self.name, self.doc_type,
+        self.conn.delete(self.name, container_name,
             self.id(container_name, key))
+
+    def search(self, container_name, query, **kwargs):
+        return self.conn.search(
+            query,
+            indexes=[self.name],
+            doc_types=[container_name],
+            **kwargs)
 
 
 class Storage(object):
@@ -215,7 +209,7 @@ class Container(object):
         # validate supported types
         if _type not in ('int', 'float', 'str', 'full', 'datetime', 'bool'):
             raise InvalidIndexException('The index type "%s" is not valid' % (
-                getattr(_type, '__name__', '')))
+                _type))
         index[index_name] = _type
         self.es.update_mapping(self.name)
 
@@ -224,10 +218,9 @@ class Container(object):
         query = MatchAllQuery()
         for key, value in dquery.items():
             filters.append(TermFilter(key, value))
-        filters.append(TermFilter('zelastic_container_name', self.name))
-        query = FilteredQuery(query, ANDFilter(filters))
-        return ResultWrapper(
-            self,
-            self.es.conn.search(query=query, fields="zelastic_doc_key",
-                sort=sort))
+        if filters:
+            query = FilteredQuery(query, ANDFilter(filters))
+        res = self.es.search(self.name, query, fields="zelastic_doc_key",
+                             sort=sort)
+        return ResultWrapper(self, res)
 
