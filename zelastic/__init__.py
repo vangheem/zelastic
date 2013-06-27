@@ -170,7 +170,8 @@ class ResultWrapper(object):
             return self.container.get(elasticres.zelastic_doc_id)
 
     def __iter__(self):
-        return self
+        for r in self.rl:
+            yield self.container.get(r.zelastic_doc_id)
 
     def __len__(self):
         return len(self.rl)
@@ -183,6 +184,9 @@ class Container(object):
         self._data = store.store[name]
         self.name = name
         self.es = self.store.es
+
+    def __len__(self):
+        return len(self._data)
 
     def insert(self, data, id=None):
         if id is None:
@@ -202,7 +206,7 @@ class Container(object):
         return self._data.keys()
 
     def _rawData(self, data):
-        if isinstance(data, self.store.model_class):
+        if self.store.model_class and isinstance(data, self.store.model_class):
             return data.data
         return data
 
