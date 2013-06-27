@@ -20,7 +20,9 @@ setup(name='zelastic',
       install_requires=[
           'ZODB',
           'BTree',
-          'pyes'
+          'pyes',
+          'unittest2',
+          'coverage'
       ],
       entry_points="""
       # -*- Entry points: -*-
