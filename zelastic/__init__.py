@@ -188,6 +188,9 @@ class Container(object):
     def __len__(self):
         return len(self._data)
 
+    def __contains__(self, id):
+        return id in self._data
+
     def insert(self, data, id=None):
         if id is None:
             id = str(uuid.uuid4())
