@@ -247,6 +247,13 @@ class Container(object):
         index[index_name] = _type
         self.es.update_mapping(self.name)
 
+    def remove_index(self, index_name):
+        meta = self.store.meta(self.name)
+        index = meta['indexes']
+        if index_name in index:
+            del index[index_name]
+            self.es.update_mapping(self.name)
+
     def search(self, sort='zelastic_doc_id', **dquery):
         filters = []
         query = MatchAllQuery()
