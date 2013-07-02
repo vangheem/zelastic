@@ -106,7 +106,7 @@ class ElasticCatalog(object):
             bulk=self.bulk)
 
     def delete_all(self, container_name):
-        self.conn.delete(
+        self.conn.delete_all(
             self.name,
             container_name)
 
