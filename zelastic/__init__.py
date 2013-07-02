@@ -105,6 +105,11 @@ class ElasticCatalog(object):
             self.id(container_name, key),
             bulk=self.bulk)
 
+    def delete_all(self, container_name):
+        self.conn.delete(
+            self.name,
+            container_name)
+
     def search(self, container_name, query, **kwargs):
         return self.conn.search(
             query,
@@ -138,6 +143,7 @@ class Storage(object):
     def drop(self, name):
         if name in self.store:
             del self.store[name]
+            self.es.delete_all(name)
 
     def list(self):
         res = self.store.keys()
