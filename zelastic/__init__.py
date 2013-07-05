@@ -106,7 +106,7 @@ class ElasticCatalog(object):
             bulk=self.bulk)
 
     def delete_all(self, container_name):
-        self.conn.delete_all(
+        self.conn.delete_mapping(
             self.name,
             container_name)
 
@@ -259,6 +259,12 @@ class Container(object):
         if index_name in index:
             del index[index_name]
             self.es.update_mapping(self.name)
+
+    def index(self, obj):
+        if isinstance(obj, basestring):
+            obj = self.get(obj)
+        data = self._rawData(obj)
+        self.es.index(self.name, data, obj.id)
 
     def search(self, sort='zelastic_doc_id', **dquery):
         filters = []
