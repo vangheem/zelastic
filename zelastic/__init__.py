@@ -61,9 +61,9 @@ class ElasticCatalog(object):
                 index = {
                     'type': 'integer',
                 }
-            elif _type == 'datetime':
+            elif _type in ('datetime', 'date'):
                 index = {
-                    'type': 'datetime',
+                    'type': 'date',
                 }
             elif _type == 'float':
                 index = {
@@ -161,6 +161,9 @@ class Storage(object):
             meta[name]['indexes'] = PersistentMapping()
         return meta[name]
 
+    def refresh(self):
+        self.es.conn.refresh()
+
 
 class ResultWrapper(object):
     def __init__(self, container, rl):
@@ -252,7 +255,7 @@ class Container(object):
         meta = self.store.meta(self.name)
         index = meta['indexes']
         # validate supported types
-        if _type not in ('int', 'float', 'str', 'full', 'datetime', 'bool'):
+        if _type not in ('int', 'float', 'str', 'full', 'date', 'datetime', 'bool'):
             raise InvalidIndexException('The index type "%s" is not valid' % (
                 _type))
         index[index_name] = _type
