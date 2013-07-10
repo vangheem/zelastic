@@ -74,6 +74,7 @@ class ElasticCatalog(object):
         self.conn.indices.put_mapping(
             doc_type=name,
             mapping={
+                'ignore_conflicts': True,
                 'properties': properties
             },
             indices=[self.name])
@@ -207,6 +208,8 @@ class Container(object):
                 # already have this key, error
                 raise KeyError('The key "%s" already exists in database' % (
                     id))
+        if isinstance(data, dict):
+            data = PersistentMapping(data)
         self._data[id] = data
         self.es.index(self.name, data, id)
         return id
@@ -224,6 +227,8 @@ class Container(object):
             raise KeyError('Update failed: The id "%s" ' % id + \
                            'does not exist in database.')
         data = self._rawData(data)
+        if isinstance(data, dict):
+            data = PersistentMapping(data)
         self._data[id] = data
         self.es.index(self.name, data, id)
 
@@ -273,6 +278,11 @@ class Container(object):
             filters.append(TermFilter(key, value))
         if filters:
             query = FilteredQuery(query, ANDFilter(filters))
+        res = self.es.search(self.name, query, fields="zelastic_doc_id",
+                             sort=sort)
+        return ResultWrapper(self, res)
+
+    def run_query(self, query, sort="zelastic_doc_id"):
         res = self.es.search(self.name, query, fields="zelastic_doc_id",
                              sort=sort)
         return ResultWrapper(self, res)
