@@ -118,13 +118,27 @@ class ElasticCatalog(object):
             doc_types=[container_name],
             **kwargs)
 
+    def getFacets(self, container_name, field, size=100):
+        return self.conn.search_raw({
+            "facets": {
+                field: {
+                    "terms": {
+                        "all_terms": True,
+                        "field": field,
+                        "size": size,
+                        "order": "term"
+                    }
+                }
+            }
+        }, indexes=[self.name], doc_type=container_name)
+
 
 class Storage(object):
 
     def __init__(self, root, es_string, es_name, bulk=False, bulk_size=400,
-                       model_class=None):
+                 model_class=None):
         self.es = ElasticCatalog(es_string, es_name, self, bulk=bulk,
-                bulk_size=bulk_size)
+                                 bulk_size=bulk_size)
         self.root = root
         if _storage_key not in self.root:
             self.root[_storage_key] = PersistentMapping()
@@ -173,9 +187,13 @@ class ResultWrapper(object):
     def __getitem__(self, val):
         elasticres = self.rl[val]
         if type(elasticres) in (list, tuple, set, ResultSet):
-            return [
-                self.container.get(r.zelastic_doc_id)
-                for r in elasticres]
+            results = []
+            for result in elasticres:
+                try:
+                    results.append(self.container.get(result.zelastic_doc_id))
+                except KeyError:
+                    pass
+            return results
         else:
             return self.container.get(elasticres.zelastic_doc_id)
 
@@ -227,7 +245,7 @@ class Container(object):
 
     def update(self, data, id):
         if id not in self._data:
-            raise KeyError('Update failed: The id "%s" ' % id + \
+            raise KeyError('Update failed: The id "%s" ' % id +
                            'does not exist in database.')
         data = self._rawData(data)
         if isinstance(data, dict):
@@ -237,14 +255,14 @@ class Container(object):
 
     def delete(self, id):
         if id not in self._data:
-            raise KeyError('Delete failed: The id "%s" ' % id + \
+            raise KeyError('Delete failed: The id "%s" ' % id +
                            'does not exist in database.')
         del self._data[id]
         self.es.delete(self.name, id)
 
     def get(self, id):
         if id not in self._data:
-            raise KeyError('get failed: The id "%s" ' % id + \
+            raise KeyError('get failed: The id "%s" ' % id +
                            'does not exist in database.')
         data = self._data[id]
         if self.store.model_class:
@@ -255,7 +273,8 @@ class Container(object):
         meta = self.store.meta(self.name)
         index = meta['indexes']
         # validate supported types
-        if _type not in ('int', 'float', 'str', 'full', 'date', 'datetime', 'bool'):
+        if _type not in ('int', 'float', 'str', 'full', 'date',
+                         'datetime', 'bool'):
             raise InvalidIndexException('The index type "%s" is not valid' % (
                 _type))
         index[index_name] = _type
@@ -295,3 +314,5 @@ class Container(object):
         if len(res) > 0:
             return res[0]
 
+    def getFacets(self, field, size=100):
+        return self.es.getFacets(self.name, field, size=size)['facets'][field]
